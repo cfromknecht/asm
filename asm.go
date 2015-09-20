@@ -1,9 +1,8 @@
-package main
+package asm
 
 import (
 	"crypto/sha256"
 	"encoding/base64"
-	"fmt"
 	"io"
 )
 
@@ -31,14 +30,14 @@ func (acc *AsyncAcc) Add(x string) (witPath WitnessPath) {
 	newAcc := *acc
 
 	d := 0
-	z := hashSHA256(x)
+	z := base64SHA256(x)
 
 	for newAcc[d] != "-" {
 		if len(newAcc) < d+2 {
 			newAcc = append(newAcc, "-")
 		}
 
-		z = hashSHA256(newAcc[d] + z)
+		z = base64SHA256(newAcc[d] + z)
 		witPath = append(witPath, WitnessNode{newAcc[d], LEFT})
 		newAcc[d] = "-"
 
@@ -81,14 +80,14 @@ func UpdateWitness(y string, witPathY, witPathX WitnessPath) (newWitPathX Witnes
 }
 
 func getAncestors(x string, witPath WitnessPath) []string {
-	c := hashSHA256(x)
+	c := base64SHA256(x)
 	ancestors := []string{c}
 
 	for _, node := range witPath {
 		if node.dir == LEFT {
-			c = hashSHA256(node.hash + c)
+			c = base64SHA256(node.hash + c)
 		} else {
-			c = hashSHA256(c + node.hash)
+			c = base64SHA256(c + node.hash)
 		}
 		ancestors = append(ancestors, c)
 	}
@@ -96,29 +95,8 @@ func getAncestors(x string, witPath WitnessPath) []string {
 	return ancestors
 }
 
-func hashSHA256(x string) string {
+func base64SHA256(x string) string {
 	h256 := sha256.New()
 	io.WriteString(h256, x)
 	return base64.StdEncoding.EncodeToString(h256.Sum(nil))
-}
-
-func main() {
-	numValues := (1 << 16) - 1
-	acc := NewAsyncAcc()
-
-	fmt.Print("[ADDING VALUES] |")
-	for i := 0; i < numValues; i++ {
-		acc.Add(fmt.Sprintf("%d", i))
-
-		// Print progress bar
-		divisor := numValues / 100
-		if i%(10*divisor) == 0 && i != 0 {
-			if i/divisor != 100 {
-				fmt.Print(i / divisor)
-			}
-		} else if i%divisor == 0 {
-			fmt.Print("=")
-		}
-	}
-	fmt.Println("|\naccumulator for", numValues, "values:", acc)
 }
