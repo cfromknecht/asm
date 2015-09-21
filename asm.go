@@ -6,14 +6,6 @@ import (
 	"io"
 )
 
-type AsyncAcc []string
-
-type WitnessPath []WitnessNode
-type WitnessNode struct {
-	hash string
-	dir  Direction
-}
-
 type Direction int
 
 const (
@@ -21,25 +13,37 @@ const (
 	RIGHT
 )
 
+type WitnessPath []WitnessNode
+
+type WitnessNode struct {
+	hash string
+	dir  Direction
+}
+
+const (
+	Bot = "-"
+)
+
+type AsyncAcc []string
+
 func NewAsyncAcc() AsyncAcc {
-	return AsyncAcc{"-"}
+	return AsyncAcc{Bot}
 }
 
 func (acc *AsyncAcc) Add(x string) (witPath WitnessPath) {
-	// Copy previous accumulator
 	newAcc := *acc
 
 	d := 0
 	z := base64SHA256(x)
 
-	for newAcc[d] != "-" {
+	for newAcc[d] != Bot {
 		if len(newAcc) < d+2 {
-			newAcc = append(newAcc, "-")
+			newAcc = append(newAcc, Bot)
 		}
 
 		z = base64SHA256(newAcc[d] + z)
 		witPath = append(witPath, WitnessNode{newAcc[d], LEFT})
-		newAcc[d] = "-"
+		newAcc[d] = Bot
 
 		d++
 	}
@@ -69,7 +73,6 @@ func UpdateWitness(y string, witPathY, witPathX WitnessPath) (newWitPathX Witnes
 	}
 
 	ancestorsY := getAncestors(y, witPathY)
-	// Add ancestor and append rest of `witPathY`s path
 	newWitPathX = witPathX
 	newWitPathX = append(newWitPathX, WitnessNode{ancestorsY[dx], RIGHT})
 	if dx+1 < len(witPathY) {
